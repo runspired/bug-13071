@@ -4,4 +4,6 @@ export function complexHelper2(params/*, hash*/) {
   return params;
 }
 
-export default Ember.Helper.helper(complexHelper2);
+export default Ember.Helper.extend({
+  compute: complexHelper2
+});
