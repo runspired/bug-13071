@@ -3,6 +3,7 @@
 module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'bug-13071',
+    podModulePrefix: 'bug-13071/routes',
     environment: environment,
     baseURL: '/',
     locationType: 'auto',
