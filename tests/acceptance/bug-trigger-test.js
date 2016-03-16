@@ -1,79 +1,117 @@
-/* jshint ignore:start */
 import { test } from 'qunit';
 import Ember from 'ember';
 import moduleForAcceptance from 'bug-13071/tests/helpers/module-for-acceptance';
+import startApp from 'bug-13071/tests/helpers/start-app';
 
 const {
-  RSVP
+  RSVP,
+  run
   } = Ember;
 
 const {
   Promise
   } = RSVP;
 
+const RUNS = 10000;
+
 moduleForAcceptance('Acceptance | bug trigger');
 
-test(`visiting /bug-trigger-${i}`, function(assert) {
-  let runs = 5;
-  assert.expect(runs);
+test(`attempting to trigger the bug with ${RUNS} runs of the application`, function(assert) {
+  let runs = RUNS;
   let done = assert.async();
+  assert.expect(runs);
 
-  const setup = () => {};
-  const teardown = () => {};
+  run(this.application, 'destroy');
 
-  function run(i) {
+  let application;
+  let router;
+
+  const setup = () => {
+    application = startApp();
+    router = application.__container__.lookup('router:main');
+  };
+
+  const teardown = () => {
+    run(application, 'destroy');
+  };
+
+  const runInstance = (index) => {
     return new Promise((resolve, reject) => {
-      function throwIf(a, b, c) {
+      setup();
+
+      const throwIf = (a, b, c) => {
         if (a !== b) {
           reject();
           assert.equal(a, b, c);
+          return false;
         }
-      }
+        return true;
+      };
 
       visit('/');
-      throwIf(currentURL(), '/', `we transitioned ${i}`);
 
-      andThen(function() {
+      andThen(() => {
+        if (!throwIf(currentURL(), '/', `we transitioned ${index}`)) {
+          return;
+        }
         visit('/visit-1');
-        throwIf(currentURL(), '/visit-1', `we transitioned ${i}`);
 
-        andThen(function() {
+
+        andThen(() => {
+          if(!throwIf(currentURL(), '/visit-1', `we transitioned ${index}`)) {
+            return;
+          }
           visit('/visit-2');
-          throwIf(currentURL(), '/visit-2', `we transitioned ${i}`);
 
-          andThen(function() {
+          andThen(() => {
+            if(!throwIf(currentURL(), '/visit-2', `we transitioned ${index}`)) {
+              return;
+            }
             visit('/visit-3');
-            throwIf(currentURL(), '/visit-3', `we transitioned ${i}`);
 
-            andThen(function() {
+            andThen(() => {
+              if(!throwIf(currentURL(), '/visit-3', `we transitioned ${index}`)) {
+                return;
+              }
               visit('/visit-4');
-              throwIf(currentURL(), '/visit-4', `we transitioned ${i}`);
 
-              andThen(function() {
+              andThen(() => {
+                if(!throwIf(currentURL(), '/visit-4', `we transitioned ${index}`)) {
+                  return;
+                }
                 visit('/visit-5');
-                throwIf(currentURL(), '/visit-5', `we transitioned ${i}`);
-                assert.ok(`run passed ${i}`);
-                resolve();
+
+                andThen(() => {
+                  if(!throwIf(currentURL(), '/visit-5', `we transitioned ${index}`)) {
+                    return;
+                  }
+                  assert.ok(`run passed ${index}`);
+                  teardown();
+                  resolve();
+                });
               });
             });
           });
         });
+
       });
     });
+  };
+
+  let promises = [];
+  for (let i = 0; i < runs; i++) {
+    promises.push(i);
   }
 
-  let promises = new Array(runs);
-  let chain = promises.reduce(function(chain, v, i) {
+  let chain = promises.reduce((chain, currentIndex) => {
     return chain
-      .then(setup)
       .then(() => {
-        return run(i);
-      })
-      .then(teardown);
+        return runInstance(currentIndex);
+      });
   }, Promise.resolve());
 
-  return chain.then(done);
+  chain.finally(() => {
+    done();
+  });
 
 });
-
-/* jshint ignore:end */
