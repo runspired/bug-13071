@@ -12,7 +12,7 @@ const {
   Promise
   } = RSVP;
 
-const RUNS = 10000;
+const RUNS = 1000;
 
 moduleForAcceptance('Acceptance | bug trigger');
 
