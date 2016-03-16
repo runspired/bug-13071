@@ -12,7 +12,8 @@ const {
   Promise
   } = RSVP;
 
-const RUNS = 1000;
+const RUNS = 500;
+const ROUTE_INTERVAL = 100;
 
 moduleForAcceptance('Acceptance | bug trigger');
 
@@ -36,66 +37,42 @@ test(`attempting to trigger the bug with ${RUNS} runs of the application`, funct
   };
 
   const runInstance = (index) => {
-    return new Promise((resolve, reject) => {
-      setup();
 
-      const throwIf = (a, b, c) => {
-        if (a !== b) {
-          reject();
-          assert.equal(a, b, c);
-          return false;
-        }
-        return true;
-      };
+    const throwIf = (a, b, c) => {
+      if (a !== b) {
+        reject();
+        assert.equal(a, b, c);
+        return false;
+      }
+      return true;
+    };
 
-      visit('/');
-
-      andThen(() => {
-        if (!throwIf(currentURL(), '/', `we transitioned ${index}`)) {
-          return;
-        }
-        visit('/visit-1');
-
-
-        andThen(() => {
-          if(!throwIf(currentURL(), '/visit-1', `we transitioned ${index}`)) {
-            return;
-          }
-          visit('/visit-2');
-
+    const visitRoute = (path) => {
+      return new Promise((resolve, reject) => {
+        run.later(() => {
+          visit(path);
           andThen(() => {
-            if(!throwIf(currentURL(), '/visit-2', `we transitioned ${index}`)) {
-              return;
+            if (!throwIf(currentURL(), path, `we transitioned ${index}`)) {
+              return reject();
             }
-            visit('/visit-3');
-
-            andThen(() => {
-              if(!throwIf(currentURL(), '/visit-3', `we transitioned ${index}`)) {
-                return;
-              }
-              visit('/visit-4');
-
-              andThen(() => {
-                if(!throwIf(currentURL(), '/visit-4', `we transitioned ${index}`)) {
-                  return;
-                }
-                visit('/visit-5');
-
-                andThen(() => {
-                  if(!throwIf(currentURL(), '/visit-5', `we transitioned ${index}`)) {
-                    return;
-                  }
-                  assert.ok(`run passed ${index}`);
-                  teardown();
-                  resolve();
-                });
-              });
-            });
+            resolve();
           });
-        });
-
+        }, ROUTE_INTERVAL);
       });
-    });
+    };
+
+    setup();
+
+    return visitRoute('/')
+      .then(() => { return visitRoute('/visit-1'); })
+      .then(() => { return visitRoute('/visit-2'); })
+      .then(() => { return visitRoute('/visit-3'); })
+      .then(() => { return visitRoute('/visit-4'); })
+      .then(() => { return visitRoute('/visit-5'); })
+      .then(() => {
+        assert.ok(`run passed ${index}`);
+        return teardown();
+      });
   };
 
   let promises = [];
